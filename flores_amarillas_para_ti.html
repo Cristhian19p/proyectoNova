@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full w-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Flores Amarillas • Un Detalle Especial</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --fluid-title: clamp(2.25rem, 5vw + 1rem, 4.5rem);
+            --fluid-subtitle: clamp(0.875rem, 1.5vw + 0.5rem, 1.125rem);
+            --fluid-card-text: clamp(1.25rem, 2.5vw + 0.5rem, 1.875rem);
+            --touch-target: 48px;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 50% 25%, #2a1f0a 0%, #150f05 60%, #0a0702 100%);
+            color: #fef08a;
+            min-height: 100vh;
+            min-height: 100dvh; /* Dynamic Viewport Height for mobile browsers */
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .font-serif-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: var(--fluid-title);
+            line-height: 1.1;
+        }
+
+        .font-handwriting {
+            font-family: 'Caveat', cursive;
+            font-size: var(--fluid-card-text);
+        }
+
+        .glass-card {
+            background: rgba(38, 28, 12, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(245, 158, 11, 0.15);
+        }
+
+        .glass-badge {
+            background: rgba(245, 158, 11, 0.12);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        #ambient-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1.2deg); }
+        }
+
+        .flower-float {
+            animation: gentleFloat 5s ease-in-out infinite;
+        }
+
+        @keyframes goldenGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.3)); }
+            50% { filter: drop-shadow(0 0 35px rgba(245, 158, 11, 0.6)); }
+        }
+
+        .glow-effect {
+            animation: goldenGlow 4s infinite ease-in-out;
+        }
+
+        /* Touch target button utilities */
+        .touch-btn {
+            min-height: var(--touch-target);
+            min-width: var(--touch-target);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .touch-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Custom Scrollbars for modal content */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 999px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(245, 158, 11, 0.35);
+            border-radius: 999px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(245, 158, 11, 0.6);
+        }
+    </style>
+</head>
+<body class="flex flex-col justify-between relative min-h-screen select-none antialiased">
+
+    <!-- Background Particle Canvas -->
+    <canvas id="ambient-canvas"></canvas>
+
+    <header class="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <span class="text-2xl sm:text-3xl p-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl backdrop-blur-md">🌻</span>
+            <div>
+                <h2 class="font-serif-title text-base sm:text-lg font-bold text-amber-200 leading-tight">Flores Amarillas</h2>
+                <p class="text-[10px] sm:text-xs text-amber-400/70 font-medium">Luz & Cariño</p>
+            </div>
+        </div>
+
+        <!-- Audio Toggle Button -->
+        <button id="btn-audio" aria-label="Activar música ambiente" class="touch-btn px-3.5 py-2 glass-badge hover:bg-amber-500/20 rounded-2xl text-amber-300 transition-all duration-300 text-xs font-semibold gap-2">
+            <svg id="icon-audio-off" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+            <svg id="icon-audio-on" class="w-5 h-5 hidden animate-pulse text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+            <span class="hidden sm:inline">Música Ambiente</span>
+        </button>
+    </header>
+
+    <main class="relative z-10 flex-1 max-w-4xl mx-auto w-full px-4 flex flex-col items-center justify-center text-center my-auto py-4 sm:py-8">
+        
+        <!-- Date Badge -->
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-badge text-amber-300 text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-3 sm:mb-4">
+            <span>✨ 21 de Septiembre</span>
+        </div>
+
+        <!-- Responsive Hero Heading -->
+        <h1 class="font-serif-title font-extrabold tracking-tight text-amber-100 mb-2 sm:mb-3 drop-shadow-xl px-2">
+            Flores Amarillas Para Ti
+        </h1>
+        
+        <p class="text-xs sm:text-base text-amber-200/80 max-w-md mx-auto mb-4 sm:mb-6 font-light leading-relaxed px-4">
+            Que este detalle te recuerde lo brillante, especial e importante que eres en mi vida.
+        </p>
+
+        <!-- Dynamic Scaling SVG Bouquet Container -->
+        <div class="relative group my-2 sm:my-4 cursor-pointer w-full max-w-[280px] xs:max-w-[320px] sm:max-w-[380px] md:max-w-[420px] aspect-square flex items-center justify-center" id="bouquet-container" title="Haz clic o toca para celebrar">
+            
+            <!-- Aura Ambient Background Glow -->
+            <div class="absolute inset-2 sm:inset-0 bg-gradient-to-r from-amber-500/20 via-yellow-400/30 to-amber-600/20 rounded-full opacity-60 blur-2xl sm:blur-3xl group-hover:opacity-95 transition duration-700"></div>
+            
+            <!-- Scaling Vector Bouquet -->
+            <div class="relative w-full h-full flower-float glow-effect transform transition-transform duration-500 group-hover:scale-105 flex items-center justify-center p-2">
+                <svg viewBox="0 0 300 350" fill="none" class="w-full h-full max-h-full drop-shadow-2xl">
+                    <defs>
+                        <linearGradient id="sunPetal" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#fff066"/>
+                            <stop offset="50%" stop-color="#facc15"/>
+                            <stop offset="100%" stop-color="#ca8a04"/>
+                        </linearGradient>
+                        <radialGradient id="sunCenter" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#78350f"/>
+                            <stop offset="70%" stop-color="#451a03"/>
+                            <stop offset="100%" stop-color="#1c0a00"/>
+                        </radialGradient>
+                        <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#4ade80"/>
+                            <stop offset="100%" stop-color="#15803d"/>
+                        </linearGradient>
+                        <linearGradient id="wrapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#854d0e"/>
+                            <stop offset="50%" stop-color="#542a06"/>
+                            <stop offset="100%" stop-color="#2e1402"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Leaves -->
+                    <path d="M70 180 Q30 150 50 120 Q90 140 100 170 Z" fill="url(#leafGrad)" opacity="0.9"/>
+                    <path d="M230 180 Q270 150 250 120 Q210 140 200 170 Z" fill="url(#leafGrad)" opacity="0.9"/>
+
+                    <!-- Bouquet Wrapping -->
+                    <path d="M70 160 L150 330 L230 160 Z" fill="url(#wrapGrad)"/>
+                    <path d="M55 150 L150 330 L100 140 Z" fill="#78350f" opacity="0.8"/>
+                    <path d="M245 150 L150 330 L200 140 Z" fill="#78350f" opacity="0.8"/>
+                    
+                    <!-- Center Main Sunflower -->
+                    <g transform="translate(150, 65)">
+                        <g fill="url(#sunPetal)">
+                            <ellipse cx="0" cy="-38" rx="10" ry="24"/>
+                            <ellipse cx="0" cy="38" rx="10" ry="24"/>
+                            <ellipse cx="-38" cy="0" rx="24" ry="10"/>
+                            <ellipse cx="38" cy="0" rx="24" ry="10"/>
+                            <ellipse cx="-26" cy="-26" rx="10" ry="24" transform="rotate(-45 -26 -26)"/>
+                            <ellipse cx="26" cy="26" rx="10" ry="24" transform="rotate(-45 26 26)"/>
+                            <ellipse cx="-26" cy="26" rx="10" ry="24" transform="rotate(45 -26 26)"/>
+                            <ellipse cx="26" cy="-26" rx="10" ry="24" transform="rotate(45 26 -26)"/>
+                            <ellipse cx="-14" cy="-33" rx="8" ry="20" transform="rotate(-22.5 -14 -33)"/>
+                            <ellipse cx="14" cy="-33" rx="8" ry="20" transform="rotate(22.5 14 -33)"/>
+                            <ellipse cx="-14" cy="33" rx="8" ry="20" transform="rotate(22.5 -14 33)"/>
+                            <ellipse cx="14" cy="33" rx="8" ry="20" transform="rotate(-22.5 14 33)"/>
+                        </g>
+                        <circle cx="0" cy="0" r="22" fill="url(#sunCenter)"/>
+                        <circle cx="0" cy="0" r="20" fill="none" stroke="#a16207" stroke-width="1.5" stroke-dasharray="3,3"/>
+                    </g>
+
+                    <!-- Left Sunflower -->
+                    <g transform="translate(95, 120)">
+                        <g fill="url(#sunPetal)">
+                            <ellipse cx="0" cy="-28" rx="8" ry="18"/>
+                            <ellipse cx="0" cy="28" rx="8" ry="18"/>
+                            <ellipse cx="-28" cy="0" rx="18" ry="8"/>
+                            <ellipse cx="28" cy="0" rx="18" ry="8"/>
+                            <ellipse cx="-19" cy="-19" rx="8" ry="18" transform="rotate(-45 -19 -19)"/>
+                            <ellipse cx="19" cy="19" rx="8" ry="18" transform="rotate(-45 19 19)"/>
+                            <ellipse cx="-19" cy="19" rx="8" ry="18" transform="rotate(45 -19 19)"/>
+                            <ellipse cx="19" cy="-19" rx="8" ry="18" transform="rotate(45 19 -19)"/>
+                        </g>
+                        <circle cx="0" cy="0" r="16" fill="url(#sunCenter)"/>
+                    </g>
+
+                    <!-- Right Sunflower -->
+                    <g transform="translate(205, 120)">
+                        <g fill="url(#sunPetal)">
+                            <ellipse cx="0" cy="-28" rx="8" ry="18"/>
+                            <ellipse cx="0" cy="28" rx="8" ry="18"/>
+                            <ellipse cx="-28" cy="0" rx="18" ry="8"/>
+                            <ellipse cx="28" cy="0" rx="18" ry="8"/>
+                            <ellipse cx="-19" cy="-19" rx="8" ry="18" transform="rotate(-45 -19 -19)"/>
+                            <ellipse cx="19" cy="19" rx="8" ry="18" transform="rotate(-45 19 19)"/>
+                            <ellipse cx="-19" cy="19" rx="8" ry="18" transform="rotate(45 -19 19)"/>
+                            <ellipse cx="19" cy="-19" rx="8" ry="18" transform="rotate(45 19 -19)"/>
+                        </g>
+                        <circle cx="0" cy="0" r="16" fill="url(#sunCenter)"/>
+                    </g>
+
+                    <!-- Yellow Roses -->
+                    <g transform="translate(150, 140)">
+                        <circle cx="0" cy="0" r="18" fill="url(#sunPetal)"/>
+                        <circle cx="-2" cy="-2" r="12" fill="none" stroke="#fef08a" stroke-width="2"/>
+                        <circle cx="1" cy="1" r="6" fill="none" stroke="#a16207" stroke-width="1.5"/>
+                    </g>
+
+                    <!-- Golden Bow Ribbon -->
+                    <rect x="138" y="215" width="24" height="14" rx="4" fill="#fef08a"/>
+                    <path d="M150 222 L120 265 L138 258 Z" fill="#eab308"/>
+                    <path d="M150 222 L180 265 L162 258 Z" fill="#eab308"/>
+                    <circle cx="150" cy="222" r="4" fill="#ca8a04"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Primary Action Button -->
+        <button id="btn-open-card" class="touch-btn mt-4 sm:mt-6 px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-amber-950 font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-xl shadow-amber-500/20 hover:shadow-2xl hover:shadow-amber-500/40 active:scale-95 transition-all duration-300 gap-2.5">
+            <span>✨ Ver Mensaje Especial</span>
+        </button>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 py-4 sm:py-6 text-center text-[11px] sm:text-xs text-amber-400/50 font-medium px-4">
+        Un detalle hecho con cariño • <span id="year-text">2026</span>
+    </footer>
+
+    <div id="modal-card" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-card max-w-lg w-full max-h-[88vh] max-h-[88dvh] rounded-3xl p-5 sm:p-8 relative transform scale-95 transition-transform duration-300 text-center flex flex-col justify-between overflow-hidden">
+            
+            <!-- Sticky Close Icon -->
+            <button id="close-modal-card" aria-label="Cerrar dedicatoria" class="touch-btn absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-amber-400/80 hover:text-amber-100 rounded-full transition-colors z-20">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <!-- Scrollable Content Body -->
+            <div class="overflow-y-auto custom-scroll pr-1 my-auto">
+                
+                <div class="inline-block p-3 sm:p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20 mb-3 sm:mb-4">
+                    <span class="text-3xl sm:text-4xl">🌻</span>
+                </div>
+
+                <h3 class="font-serif-title font-bold text-amber-100 mb-1">
+                    Para Ti
+                </h3>
+                <p class="text-[10px] sm:text-xs uppercase tracking-widest text-amber-400 font-semibold mb-4 sm:mb-6">
+                    Feliz Día de las Flores Amarillas
+                </p>
+
+                <div class="py-4 sm:py-6 px-4 sm:px-6 bg-amber-950/40 rounded-2xl border border-amber-800/30 my-2">
+                    <p class="font-handwriting text-amber-100 leading-relaxed">
+                        "Las flores amarillas representan la luz, la energía bonita, la alegría y la fortuna de tenerte cerca. Que este día esté lleno de la misma sonrisa radiante que siempre le regalas a los demás."
+                    </p>
+                    <p class="text-[11px] sm:text-xs uppercase tracking-wider text-amber-400 font-bold mt-4 sm:mt-6">
+                        — Con todo mi cariño ✨
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Modal Action Button -->
+            <div class="pt-4 mt-2">
+                <button id="btn-close-inside" class="touch-btn w-full py-3.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-bold text-xs uppercase tracking-wider transition-all">
+                    Guardar en el corazón
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('year-text').textContent = new Date().getFullYear();
+
+        const canvas = document.getElementById('ambient-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = 0, height = 0, dpr = window.devicePixelRatio || 1;
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        /* Petal Class Definition */
+        class Petal {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = -20;
+                this.size = Math.random() * 7 + 4;
+                this.speedY = Math.random() * 1.2 + 0.4;
+                this.speedX = Math.random() * 0.8 - 0.4;
+                this.angle = Math.random() * 360;
+                this.spin = Math.random() * 2 - 1;
+                this.opacity = Math.random() * 0.6 + 0.3;
+            }
+            update() {
+                this.y += this.speedY;
+                this.x += Math.sin(this.y * 0.01) + this.speedX;
+                this.angle += this.spin;
+                if (this.y > height + 20) this.reset();
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.angle * Math.PI) / 180);
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(this.size, -this.size / 2, this.size, -this.size);
+                ctx.quadraticCurveTo(0, -this.size * 1.5, -this.size, -this.size);
+                ctx.quadraticCurveTo(-this.size, -this.size / 2, 0, 0);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        /* Sparkle Class Definition */
+        class Sparkle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 2 + 0.8;
+                this.opacity = Math.random();
+                this.speedOpacity = Math.random() * 0.02 + 0.005;
+            }
+            update() {
+                this.opacity += this.speedOpacity;
+                if (this.opacity > 1 || this.opacity < 0) this.speedOpacity = -this.speedOpacity;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.abs(this.opacity);
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Generate optimal amount of particles for smooth 60fps rendering
+        const petalCount = width < 640 ? 25 : 45;
+        const sparkleCount = width < 640 ? 25 : 50;
+        const petals = Array.from({ length: petalCount }, () => new Petal());
+        const sparkles = Array.from({ length: sparkleCount }, () => new Sparkle());
+
+        function renderScene() {
+            ctx.clearRect(0, 0, width, height);
+            sparkles.forEach(s => { s.update(); s.draw(); });
+            petals.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(renderScene);
+        }
+        renderScene();
+
+        const modalCard = document.getElementById('modal-card');
+        const btnOpenCard = document.getElementById('btn-open-card');
+        const btnCloseCard = document.getElementById('close-modal-card');
+        const btnCloseInside = document.getElementById('btn-close-inside');
+
+        function openModal() {
+            modalCard.classList.remove('opacity-0', 'pointer-events-none');
+            modalCard.children[0].classList.remove('scale-95');
+            modalCard.children[0].classList.add('scale-100');
+            triggerConfetti();
+        }
+
+        function closeModal() {
+            modalCard.classList.add('opacity-0', 'pointer-events-none');
+            modalCard.children[0].classList.remove('scale-100');
+            modalCard.children[0].classList.add('scale-95');
+        }
+
+        btnOpenCard.addEventListener('click', openModal);
+        btnCloseCard.addEventListener('click', closeModal);
+        btnCloseInside.addEventListener('click', closeModal);
+
+        // Close modal on outside click
+        modalCard.addEventListener('click', (e) => {
+            if (e.target === modalCard) closeModal();
+        });
+
+        // Trigger confetti on bouquet tap/click
+        document.getElementById('bouquet-container').addEventListener('click', triggerConfetti);
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: width < 640 ? 50 : 80,
+                    spread: 60,
+                    origin: { y: 0.6 },
+                    colors: ['#facc15', '#fef08a', '#eab308', '#ffffff']
+                });
+            }
+        }
+
+        let audioCtx = null, isPlaying = false, audioTimer = null;
+        document.getElementById('btn-audio').addEventListener('click', () => {
+            const iconOff = document.getElementById('icon-audio-off');
+            const iconOn = document.getElementById('icon-audio-on');
+
+            if (!isPlaying) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                isPlaying = true;
+                iconOff.classList.add('hidden');
+                iconOn.classList.remove('hidden');
+
+                const scale = [261.63, 329.63, 392.00, 493.88, 523.25, 659.25];
+                let i = 0;
+                audioTimer = setInterval(() => {
+                    if (!isPlaying) return;
+                    try {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = scale[i % scale.length];
+                        gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.04, audioCtx.currentTime + 0.3);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 2.2);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 2.3);
+                        i++;
+                    } catch (err) {
+                        console.warn("Audio playback error:", err);
+                    }
+                }, 950);
+            } else {
+                isPlaying = false;
+                iconOff.classList.remove('hidden');
+                iconOn.classList.add('hidden');
+                if (audioTimer) clearInterval(audioTimer);
+            }
+        });
+    </script>
+</body>
+</html>
